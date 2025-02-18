@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>">
+    <style>
+        body{
+            overflow: hidden;
+        }
+        .main-heading{
+            display: block;
+            align-content: center;
+            text-align: center;
+            font-size: 84px;
+        }
+
+        .centering-div{
+            display: flex;
+            justify-content: center;
+        }
+
+        #game-window{
+            border: 3px solid black;
+        }
+
+        .controls-info {
+            font-size: 48px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="main-heading">Snake Game</h1>
+
+    <div class="centering-div">
+        <canvas id="game-window" width="1000px" height="1000px"></canvas>
+    </div>
+
+    <div class="centering-div">
+        <p class="controls-info">The controls are ⬅️, ⬆️, ➡️, ⬇️</p>
+    </div>
+
+    <dialog id="dialog-box">
+
+        <div class="centering-div">
+            <div style="display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <p style="font-size: 32px;padding-bottom: 0;margin-bottom: 10px;">Game Over!!</p>
+                <p style="font-size: 16px;">Your Score:</p>
+                <span id="score" style="font-size: 48px;"></span>
+                <p>Highest Score Yet: <span id="highest-score" style="font-size: 16px;"></span></p>
+                <button onclick="reset()" style="height: 30px;">Reset</button>
+            </div>
+        </div>
+        
+    </dialog>
+    
+
+    <script>
+        const dialog_box = document.getElementById("dialog-box");
+        const highest_score = document.getElementById("highest-score");
+        const score = document.getElementById("score");
+        const canvas = document.getElementById("game-window");
+        const ctx = canvas.getContext("2d");
+
+        const grid = 50;
+        let clock = 0;
+        let animation_active = true;
+
+        // saves the highest score value in a cookie
+        if(document.cookie.split("; ").find((row) => row.startsWith("highest_score_value="))?.split("=")[1] === undefined){
+            document.cookie = "highest_score_value=0";
+        }
+        let highest_score_value = parseInt(document.cookie.split("; ").find((row) => row.startsWith("highest_score_value="))?.split("=")[1]);
+
+        class Snake {
+            constructor(x,y,dx,dy){
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.cells = [(x,y)];
+                this.length = 1;
+            }
+        }
+
+        let snake = new Snake(400,400,grid,0);
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+        class Apple {
+            constructor(avoid_cells){
+                let x = getRandomInt(0,canvas.width/grid) * grid;
+                let y = getRandomInt(0,canvas.height/grid) * grid;
+
+                for(let i = 0; i <avoid_cells.length;i++){
+                    if(avoid_cells[i].x === x && avoid_cells[i].y === y){
+                        x = getRandomInt(0,canvas.width/grid) * grid;
+                        y = getRandomInt(0,canvas.height/grid) * grid;
+                        i = 0;
+                    }
+                }
+
+                this.x = x;
+                this.y = y;
+            }
+        }
+
+        let apple = new Apple(snake.cells);
+    </script>
+
+    <script>
+        function game_loop(){
+            requestAnimationFrame(game_loop);
+
+            if(!animation_active){
+                return;
+            }
+
+            if(++clock < 5){
+                return;
+            }
+            clock = 0;
+
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+
+             
+            snake.x += snake.dx;
+            snake.y += snake.dy;
+
+            if(snake.x >= canvas.width){
+                snake.x = 0;
+            }else if(snake.x < 0){
+                snake.x = canvas.width - grid;
+            }
+
+            if(snake.y >= canvas.height){
+                snake.y = 0;
+            }else if(snake.y < 0){
+                snake.y = canvas.height - grid;
+            }
+
+            for(let i=0;i<snake.cells.length;i++){
+                if(snake.cells[i].x === snake.x && snake.cells[i].y === snake.y){
+                    dialog_box.showModal();
+                    animation_active = false;
+                    score.textContent = snake.length - 1;
+                    highest_score_value = Math.max(highest_score_value,snake.length - 1);
+                    highest_score.textContent = highest_score_value;
+                    document.cookie = `highest_score_value=${highest_score_value}`;
+                    break;
+                }
+            }
+
+            snake.cells.unshift({x:snake.x,y:snake.y});
+            
+            if(snake.x === apple.x && snake.y === apple.y){
+                apple = new Apple(snake.cells);
+                snake.length += 1;
+            }else if(snake.cells.length > snake.length){
+                snake.cells.pop();
+            }
+
+
+            ctx.fillStyle = 'green';
+            snake.cells.forEach(function(cell,index){
+                ctx.fillRect(cell.x, cell.y, grid, grid);
+            });
+
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(apple.x, apple.y, grid, grid);
+
+            ctx.fillStyle = "black";
+            ctx.font = "48px serif";
+            ctx.strokeText(`Score: ${snake.length -1}`,800,50);
+        }
+    </script>
+
+    <script>
+        document.addEventListener("keydown",function(e){
+            // left arrow key
+            if (e.which === 37 && snake.dx === 0) {
+                snake.dx = -grid;
+                snake.dy = 0;
+            }
+            // up arrow key
+            else if (e.which === 38 && snake.dy === 0) {
+                snake.dy = -grid;
+                snake.dx = 0;
+            }
+            // right arrow key
+            else if (e.which === 39 && snake.dx === 0) {
+                snake.dx = grid;
+                snake.dy = 0;
+            }
+            // down arrow key
+            else if (e.which === 40 && snake.dy === 0) {
+                snake.dy = grid;
+                snake.dx = 0;
+            }
+        });
+
+        requestAnimationFrame(game_loop);
+
+        function reset(){
+            animation_active = true;
+            snake = new Snake(400,400,grid,0);
+            apple = new Apple(snake.cells);
+            dialog_box.close();
+        }
+    </script>
+
+</body>
+</html>
