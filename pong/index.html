@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏓</text></svg>">
+    <style>
+        body{
+            overflow: hidden;
+        }
+        .main-heading{
+            display: block;
+            align-content: center;
+            text-align: center;
+            font-size: 3em;
+        }
+
+        .centering-div{
+            display: flex;
+            justify-content: center;
+        }
+
+        #game-window{
+            max-width: 80%;
+            max-height: 80%;
+            border: 3px solid black;
+        }
+
+        .controls-div{
+            font-size: 2em;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-evenly;
+        }
+
+    </style>
+</head>
+<body>
+    <h1 class="main-heading">Pong Game</h1>
+
+    <div class="centering-div">
+        <canvas id="game-window" width="1600px" height="800px"></canvas>
+    </div>
+
+    <div class="centering-div">
+        <div class="controls-div">
+            <p>Player 1 controls: W,S</p>
+            <p>Player 2 controls: ⬆️, ⬇️</p>
+        </div>
+    </div>
+
+
+
+    <script>
+        const canvas = document.getElementById("game-window");
+        const ctx = canvas.getContext("2d");
+        const grid = 25;
+        let clock = 0;
+        let reset_clock = 0;
+
+
+        function setTable(){
+            ctx.fillStyle = "grey";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            ctx.fillStyle = "black";
+            ctx.fillRect(grid,grid,canvas.width - 2*grid,canvas.height - 2*grid);
+
+            ctx.strokeStyle = 'grey';
+            ctx.lineWidth = 15;
+            ctx.beginPath();
+            ctx.setLineDash([50, 100]);
+            ctx.moveTo(800, 0);
+            ctx.lineTo(800, 800);
+            ctx.stroke();
+
+            ctx.fillStyle = "orange";
+            ctx.fillRect(0,grid*10,grid,grid*12);
+            ctx.fillRect(canvas.width - grid,grid*10,grid,grid*12);
+
+        }
+
+        class Ball{
+            constructor(x,y,dx,dy){
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+            }
+        }
+
+        let ball = new Ball(grid*32,grid*16,Math.sign(Math.random() - 0.5)*grid,Math.sign(Math.random() - 0.5)*grid);
+
+        class Paddle{
+            constructor(x,y,length){
+                this.x = x;
+                this.y = y - Math.floor(length/2);
+                this.length = length;
+            }
+        }
+
+        const player1 = new Paddle(grid*5,grid*16,grid*6);
+        const player2 = new Paddle(canvas.width - grid*5,grid*16,grid*6);
+
+        let player1_score = 0;
+        let player2_score = 0;
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+    </script>
+
+    <script>
+        function game_loop(){
+            requestAnimationFrame(game_loop);
+
+
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            setTable();
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(player1.x,player1.y,grid,player1.length);
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(player2.x,player2.y,grid,player2.length);
+
+
+            if(++clock === 4){
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+                clock = 0;
+            }
+
+            if((ball.x - grid === player1.x || ball.x === player1.x) && (player1.y <= ball.y && ball.y <= player1.y + player1.length)){
+                ball.dx = -ball.dx;
+                ball.x += 2*ball.dx;
+            }
+
+            if((ball.x - grid === player2.x || ball.x === player2.x) && (player2.y <= ball.y && ball.y <= player2.y + player2.length)){
+                ball.dx = -ball.dx;
+                ball.x += 2*ball.dx;
+            }
+
+            if((ball.y - grid === player1.y || ball.y === player1.y + player1.length) && (player1.x <= ball.x - grid && ball.x <= player1.x)){
+                ball.dy = -ball.dy;
+                ball.y += 2*ball.dy;
+            }
+
+            if((ball.y - grid === player2.y || ball.y === player2.y + player2.length) && (player2.x <= ball.x - grid && ball.x <= player2.x)){
+                ball.dy = -ball.dy;
+                ball.y += 2*ball.dy;
+            }
+
+            if(ball.x + grid >= canvas.width && grid*10 < ball.y && ball.y < grid*22){
+                player1_score += 1;
+                ball = new Ball(grid*8,player1.y + player1.length/2,grid, Math.sign(Math.random() - 0.5)*grid);
+            }
+            if(ball.x - grid <= 0 && grid*10 < ball.y && ball.y < grid*22){
+                player2_score += 1;
+                ball = new Ball(canvas.width - grid*8,player2.y + player2.length/2,-grid,Math.sign(Math.random() - 0.5)*grid);
+            }
+
+
+            if(ball.x + grid >= canvas.width || ball.x - grid <= 0){
+                ball.dx = -ball.dx;
+                ball.x += 2*ball.dx;
+            }
+            if(ball.y + grid >= canvas.height || ball.y - grid <= 0){
+                ball.dy = -ball.dy;
+                ball.y += 2*ball.dy;
+            }
+
+            ctx.beginPath();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = 'red';
+            ctx.setLineDash([]);
+            ctx.arc(ball.x, ball.y, grid, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'white';
+            ctx.font = "48px serif";
+            ctx.strokeText(`Score: ${player1_score}`,grid + 10,3*grid)
+            ctx.strokeText(`Score: ${player2_score}`,canvas.width - 8*grid,3*grid)
+
+
+
+        }
+    </script>
+
+    <script>
+        document.addEventListener("keydown",(e)=>{
+            if (e.which === 87 && player1.y - 2*grid > 0) {
+                player1.y -= 2*grid;
+            }
+            else if (e.which === 83 && player1.y + player1.length + 2*grid < canvas.height) {
+                player1.y += 2*grid;
+            }
+            if (e.which === 38 && player2.y - 2*grid > 0) {
+                player2.y -= 2*grid;
+            }
+            else if (e.which === 40 && player2.y + player2.length + 2*grid < canvas.height) {
+                player2.y += 2*grid;
+            }
+        })
+        
+        requestAnimationFrame(game_loop);
+    </script>
+    
+    
+</body>
+</html>
